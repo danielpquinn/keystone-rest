@@ -1,0 +1,23 @@
+{
+  "name": "keystone-rest",
+  "version": "0.0.0",
+  "description": "Provides a RESTful interface to keystone lists.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danielpquinn/keystone-rest.git"
+  },
+  "keywords": [
+    "keystone",
+    "keystonejs"
+  ],
+  "author": "Dan Quinn",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/danielpquinn/keystone-rest/issues"
+  },
+  "homepage": "https://github.com/danielpquinn/keystone-rest"
+}
