@@ -1,4 +1,4 @@
 keystone-rest
 =============
 
-Provides a RESTful interface to keystone lists.
+Makes it easy to expose RESTful routes for keystone lists.
