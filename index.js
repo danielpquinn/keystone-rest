@@ -23,8 +23,8 @@ KeystoneRest.prototype.exposeRoutes = function(keystoneList, options) {
   if (!options.omit) { options.omit = {}; }
 
   if (options.methods.indexOf('get') > -1) { this.addGet(keystoneList, options.omit['get']); }
-  if (options.methods.indexOf('post') > -1) { this.addPost(keystoneList, options.omit['post'], options.omit['get']); }
-  if (options.methods.indexOf('put') > -1) { this.addPut(keystoneList, options.omit['put'], options.omit['get']); }
+  if (options.methods.indexOf('post') > -1) { this.addPost(keystoneList, options.omit['post']); }
+  if (options.methods.indexOf('put') > -1) { this.addPut(keystoneList, options.omit['put']); }
   if (options.methods.indexOf('delete') > -1) { this.addDelete(keystoneList, options.omit['delete']); }
 };
 
@@ -37,27 +37,6 @@ KeystoneRest.prototype.exposeRoutes = function(keystoneList, options) {
 KeystoneRest.prototype.sendError = function (err, res) {
   res.status(400);
   res.json(err);
-};
-
-
-/**
- * Transform mongo error into same format as keystone
- * error messages
- * @param {Error} error error to transform
- */
-KeystoneRest.prototype.transformMongoError = function (error) {
-  return {
-    message: 'Mongodb Error',
-    name: error.name,
-    errors: {
-      mongo: {
-        name: error.name,
-        path: '',
-        message: error.err,
-        type: error.code
-      }
-    }
-  }
 };
 
 
@@ -113,6 +92,7 @@ KeystoneRest.prototype.addGet = function (keystoneList, omitted) {
       var populate = req.query.populate ? req.query.populate.split(',') : '';
 
       keystoneList.model.findById(req.params.id).populate(populate).exec(function (err, response) {
+        if (!response) { return self.sendError({ message: 'Could not find ' + keystoneList.key.toLowerCase() }, res); }
         if (err) { self.sendError(err, res); return; }
         res.json(self.removeOmitted(response, omitted));
       });
@@ -120,7 +100,7 @@ KeystoneRest.prototype.addGet = function (keystoneList, omitted) {
   });
 };
 
-KeystoneRest.prototype.addPost = function (keystoneList, omittedPost, omittedGet) {
+KeystoneRest.prototype.addPost = function (keystoneList, omitted) {
   var self = this;
 
   self.exposedRoutes.push({
@@ -130,12 +110,9 @@ KeystoneRest.prototype.addPost = function (keystoneList, omittedPost, omittedGet
       var item = new keystoneList.model(),
         updateHandler = item.getUpdateHandler(req, res);
 
-      updateHandler.process(self.removeOmitted(req.body, omittedPost), function (err, response) {
-        if (err) {
-          if (err.name === 'MongoError') { err = self.transformMongoError(err); }
-          self.sendError(err, res); return;
-        }
-        res.json(self.removeOmitted(item, omittedGet));
+      updateHandler.process(self.removeOmitted(req.body, omitted), function (err, response) {
+        if (err) { self.sendError(err, res); return; }
+        res.json(self.removeOmitted(item, omitted));
       });
     }
   });
@@ -147,7 +124,7 @@ KeystoneRest.prototype.addPost = function (keystoneList, omittedPost, omittedGet
  * @param {List} keystoneList Keystone list
  * @param {Array} omitted     Array of fields to omit
  */
-KeystoneRest.prototype.addPut = function (keystoneList, omittedPost, omittedGet) {
+KeystoneRest.prototype.addPut = function (keystoneList, omitted) {
   var self = this;
 
   self.exposedRoutes.push({
@@ -160,14 +137,14 @@ KeystoneRest.prototype.addPut = function (keystoneList, omittedPost, omittedGet)
         if (err) { self.sendError(err, res); return; }
         var updateHandler = item.getUpdateHandler(req);
 
-        updateHandler.process(self.removeOmitted(req.body, omittedPost), function (err, response) {
+        updateHandler.process(self.removeOmitted(req.body, omitted), function (err, response) {
           if (err) { self.sendError(err, res); return; }
 
           // Not sure if it's possible to populate mongoose models after
           // save, so get the document again and populate it.
           keystoneList.model.findById(req.params.id).populate(populate).exec(function (err, item) {
             if (err) { self.sendError(err, res); return; }
-            res.json(self.removeOmitted(item, omittedGet));
+            res.json(self.removeOmitted(item, omitted));
           });
         });
       });
