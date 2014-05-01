@@ -4,6 +4,11 @@ keystone-rest
 Expose keystone lists via REST api.
 
 
+Documentation
+-------------
+[http://danielpquinn.github.io/keystone-rest](http://danielpquinn.github.io/keystone-rest)
+
+
 Usage
 -----
 

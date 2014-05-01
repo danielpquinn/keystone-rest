@@ -1,7 +1,7 @@
 {
   "name": "keystone-rest",
   "version": "0.0.0",
-  "description": "Provides a RESTful interface to keystone lists.",
+  "description": "Exposes keystone lists via restful api",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
