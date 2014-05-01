@@ -110,7 +110,7 @@ KeystoneRest.prototype.addPost = function (keystoneList, omitted) {
       var item = new keystoneList.model(),
         updateHandler = item.getUpdateHandler(req, res);
 
-      updateHandler.process(self.removeOmitted(req.body, omitted), function (err, response) {
+      updateHandler.process(req.body, function (err, response) {
         if (err) { self.sendError(err, res); return; }
         res.json(self.removeOmitted(item, omitted));
       });
@@ -137,7 +137,7 @@ KeystoneRest.prototype.addPut = function (keystoneList, omitted) {
         if (err) { self.sendError(err, res); return; }
         var updateHandler = item.getUpdateHandler(req);
 
-        updateHandler.process(self.removeOmitted(req.body, omitted), function (err, response) {
+        updateHandler.process(req.body, function (err, response) {
           if (err) { self.sendError(err, res); return; }
 
           // Not sure if it's possible to populate mongoose models after
