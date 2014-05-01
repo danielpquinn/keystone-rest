@@ -22,5 +22,11 @@
   "homepage": "https://github.com/danielpquinn/keystone-rest",
   "dependencies": {
     "underscore": "~1.6.0"
+  },
+  "devDependencies": {
+    "ink-docstrap": "~0.3.0-0",
+    "jsdoc": "~3.3.0-alpha5",
+    "gulp-jsdoc": "~0.1.4",
+    "gulp": "~3.6.2"
   }
 }
