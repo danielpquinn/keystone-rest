@@ -94,7 +94,7 @@ function KeystoneRest() {
           limit = req.query.limit || Infinity;
 
         keystoneList.model.find().skip(skip).limit(limit).populate(populate).exec(function (err, response) {
-          if (err) { _sendError(err, res); return; }
+          if (err) { return _sendError(err, res); }
           response = _.map(response, function (item) {
             return _removeOmitted(item, options.omit);
           });
@@ -112,11 +112,35 @@ function KeystoneRest() {
         var populate = req.query.populate ? req.query.populate.split(',') : '';
 
         keystoneList.model.findById(req.params.id).populate(populate).exec(function (err, response) {
-          if (err) { _sendError(err, res); return; }
+          if (err) { return _sendError(err, res); }
           res.json(_removeOmitted(response, options.omit));
         });
       }
     });
+
+
+    // Get a list of relationships
+    if (options.relationships) {
+      _.each(options.relationships, function (relationship) {
+        self.routes.push({
+          method: 'get',
+          route: '/api/' + keystoneList.key.toLowerCase() + '/:id/' + relationship,
+          handler: function (req, res) {
+            var skip = req.query.skip || 0,
+              limit = req.query.limit || Infinity;
+
+            keystoneList.model.findById(req.params.id)
+              .populate(relationship, null, null, {
+                limit: limit,
+                skip: skip
+              }).exec(function (err, response) {
+                if (err) { return _sendError(err, res); }
+                res.json(response[relationship]);
+              });
+          }
+        });
+      });
+    }
   };
 
 
@@ -138,7 +162,7 @@ function KeystoneRest() {
           updateHandler = item.getUpdateHandler(req, res);
 
         updateHandler.process(_removeOmitted(req.body, options.omit), function (err, response) {
-          if (err) { _sendError(err, res); return; }
+          if (err) { return _sendError(err, res); }
           res.json(_removeOmitted(item, options.omit));
         });
       }
@@ -163,16 +187,16 @@ function KeystoneRest() {
         var populate = req.query.populate ? req.query.populate.split(',') : '';
 
         keystoneList.model.findById(req.params.id).exec(function (err, item) {
-          if (err) { _sendError(err, res); return; }
+          if (err) { return _sendError(err, res); }
           var updateHandler = item.getUpdateHandler(req);
 
           updateHandler.process(_removeOmitted(req.body, options.omit), function (err, response) {
-            if (err) { _sendError(err, res); return; }
+            if (err) { return _sendError(err, res); }
 
             // Not sure if it's possible to populate mongoose models after
             // save, so get the document again and populate it.
             keystoneList.model.findById(req.params.id).populate(populate).exec(function (err, item) {
-              if (err) { _sendError(err, res); return; }
+              if (err) { return _sendError(err, res); }
               res.json(_removeOmitted(item, options.omit));
             });
           });
@@ -195,7 +219,7 @@ function KeystoneRest() {
       route: '/api/' + keystoneList.key.toLowerCase() + '/:id',
       handler: function (req, res) {
         keystoneList.model.findByIdAndRemove(req.params.id, function (err, response) {
-          if (err) { _sendError(err, res); return; }
+          if (err) { return _sendError(err, res); }
           res.json({
             message: 'Successfully deleted ' + keystoneList.key.toLowerCase()
           });
