@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Documentation Source: /Users/danquinn/Code/keystone-rest/index.js</title>
+
+	<!--[if lt IE 9]>
+	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	<link type="text/css" rel="stylesheet" href="styles/sunlight.default.css">
+
+	
+	<link type="text/css" rel="stylesheet" href="styles/site.flatly.css">
+	
+</head>
+
+<body>
+<div class="container-fluid">
+	<div class="navbar navbar-fixed-top ">
+		<div class="navbar-inner">
+			<a class="brand" href="index.html">Documentation</a>
+			<ul class="nav">
+				
+				<li class="dropdown">
+					<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b
+						class="caret"></b></a>
+
+					<ul class="dropdown-menu ">
+						
+						<li>
+							<a href="KeystoneRest.html">KeystoneRest</a>
+						</li>
+						
+
+					</ul>
+				</li>
+				
+			</ul>
+		</div>
+	</div>
+
+	<div class="row-fluid">
+
+		
+			<div class="span12">
+				
+				<div id="main">
+					
+
+
+		<h1 class="page-title">Source: /Users/danquinn/Code/keystone-rest/index.js</h1>
+    
+    <section>
+        <article>
+            <pre class="sunlight-highlight-javascript ">var _ = require('underscore'),
+  keystone = require('keystone');
+
+
+/**
+  &lt;p>Example usage&lt;/p>
+  &lt;pre>
+  var keystone = require('keystone'),
+    Types = keystone.Field.Types,
+    keystoneRest = require('keystone-rest');
+
+  var User = new keystone.List('User');
+
+  User.add({
+    name: { type: Types.Name, required: true, index: true },
+    password: { type: Types.Password, initial: true, required: false }
+  });
+
+
+  // Expose Attribute model via REST api
+  keystoneRest.exposeRoutes(User, {
+    post: {},
+    get: { omit: ['password'] },
+    put: { omit: ['password'] },
+    delete: {}
+  });
+
+  User.register();
+  &lt;/pre>
+
+   @constructor
+ */
+function KeystoneRest() {
+
+  /**
+   * Array containing routes and handlers
+   * @type {Array}
+   */
+  this.routes = [];
+
+
+  /**
+   * Send an error response
+   * @param  {Object} err Error response object
+   * @param  {Object} res Express response
+   */
+  var _sendError = function (err, res) {
+    res.status(400);
+    res.json(err);
+  };
+
+
+  /**
+   * Remove omitted fields from response
+   * @param  {Object} model   Plain model object or mongoose instance
+   * @param  {Array} omitted Array of fields to omit
+   * @return {Object}         Plain object representation of model with removed fields
+   */
+  var _removeOmitted = function (model, omitted) {
+    var object;
+
+    if (!omitted) { return model; }
+
+    // If model is a mongoose model instance, change it
+    // into a plain object so it's properties can be
+    // deleted.
+    object = model.toObject ? model.toObject() : model;
+
+    _.each(omitted, function (field) {
+      if (object[field]) { delete object[field]; }
+    });
+
+    return object;
+  };
+
+
+  /**
+   * Add get route
+   * @param {List} keystoneList Keystone list
+   * @param {Object} options    options for this method
+   */
+  var _addGet = function (keystoneList, options) {
+    var self = this;
+    options = options || {};
+
+
+    // Get a list of items
+    self.routes.push({
+      method: 'get',
+      route: '/api/' + keystoneList.key.toLowerCase(),
+      handler: function (req, res) {
+        var populate = req.query.populate ? req.query.populate.split(',') : '',
+          skip = req.query.skip || 0,
+          limit = req.query.limit || Infinity;
+
+        keystoneList.model.find().skip(skip).limit(limit).populate(populate).exec(function (err, response) {
+          if (err) { _sendError(err, res); return; }
+          response = _.map(response, function (item) {
+            return _removeOmitted(item, options.omit);
+          });
+          res.json(_removeOmitted(response, options.omit));
+        });
+      }
+    });
+
+
+    // Get one item by id
+    self.routes.push({
+      method: 'get',
+      route: '/api/' + keystoneList.key.toLowerCase() + '/:id',
+      handler: function (req, res) {
+        var populate = req.query.populate ? req.query.populate.split(',') : '';
+
+        keystoneList.model.findById(req.params.id).populate(populate).exec(function (err, response) {
+          if (err) { _sendError(err, res); return; }
+          res.json(_removeOmitted(response, options.omit));
+        });
+      }
+    });
+  };
+
+
+  /**
+   * Add post route
+   * @param {List} keystoneList Keystone list
+   * @param {Object} options    options for this method
+   */
+  var _addPost = function (keystoneList, options) {
+    var self = this;
+    options = options || {};
+
+
+    // Create a new item
+    self.routes.push({
+      method: 'post',
+      route: '/api/' + keystoneList.key.toLowerCase(),
+      handler: function (req, res) {
+        var item = new keystoneList.model(),
+          updateHandler = item.getUpdateHandler(req, res);
+
+        updateHandler.process(_removeOmitted(req.body, options.omit), function (err, response) {
+          if (err) { _sendError(err, res); return; }
+          res.json(_removeOmitted(item, options.omit));
+        });
+      }
+    });
+  };
+
+
+  /**
+   * Add put route
+   * @param {List} keystoneList Keystone list
+   * @param {Object} options    options for this method
+   */
+  var _addPut = function (keystoneList, options) {
+    var self = this;
+    options = options || {};
+
+
+    // Update an item having a given id
+    self.routes.push({
+      method: 'put',
+      route: '/api/' + keystoneList.key.toLowerCase() + '/:id',
+      handler: function (req, res) {
+        var populate = req.query.populate ? req.query.populate.split(',') : '';
+
+        keystoneList.model.findById(req.params.id).exec(function (err, item) {
+          if (err) { _sendError(err, res); return; }
+          var updateHandler = item.getUpdateHandler(req);
+
+          updateHandler.process(_removeOmitted(req.body, options.omit), function (err, response) {
+            if (err) { _sendError(err, res); return; }
+
+            // Not sure if it's possible to populate mongoose models after
+            // save, so get the document again and populate it.
+            keystoneList.model.findById(req.params.id).populate(populate).exec(function (err, item) {
+              if (err) { _sendError(err, res); return; }
+              res.json(_removeOmitted(item, options.omit));
+            });
+          });
+        });
+      }
+    });
+  };
+
+
+  /**
+   * Add delete route
+   * @param {List} keystoneList Keystone list
+   */
+  var _addDelete = function (keystoneList) {
+    var self = this;
+
+
+    // Delete an item having a given id
+    self.routes.push({
+      method: 'delete',
+      route: '/api/' + keystoneList.key.toLowerCase() + '/:id',
+      handler: function (req, res) {
+        keystoneList.model.findByIdAndRemove(req.params.id, function (err, response) {
+          if (err) { _sendError(err, res); return; }
+          res.json({
+            message: 'Successfully deleted ' + keystoneList.key.toLowerCase()
+          });
+        });
+      }
+    });
+  };
+
+  /**
+   * Expose routes
+   * @param  {KeystoneList} keystoneList         A keystone list
+   * @param  {Object}       options              Arrays containing methods and omitted fields
+   * @param  {Object}       options.get          If present, get is exposed.
+   * @param  {Array}        options.get.omitted  Array of fields to omit from get response
+   * @param  {Object}       options.post         If present, post is exposed
+   * @param  {Array}        options.post.omitted Array of fields to omit from post response
+   * @param  {Object}       options.put          If present, put is exposed
+   * @param  {Array}        options.put.omitted  Array of fields to omit from put response
+   * @param  {Object}       options.delete       If present, delete is exposed
+   */
+  this.exposeRoutes = function (keystoneList, options) {
+    if (!options) { return console.log('No methods provided'); }
+
+    if (options.get) { _addGet(keystoneList, options.get); }
+    if (options.post) { _addPost(keystoneList, options.post); }
+    if (options.put) { _addPut(keystoneList, options.put); }
+    if (options.delete) { _addDelete(keystoneList); }
+  };
+}
+
+
+// Export instance of keystoneRest
+exports = module.exports = new KeystoneRest();</pre>
+        </article>
+    </section>
+
+
+
+
+
+				</div>
+
+				<div class="clearfix"></div>
+				<footer>
+					
+					
+		<span class="jsdoc-message">
+		Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha5</a>
+		on Thu May 01 2014 18:13:12 GMT+0000 (UTC) using the <a href="https://github.com/terryweiss/docstrap">DocStrap template</a>.
+		</span>
+				</footer>
+			</div>
+
+			
+			<br clear="both">
+		</div>
+
+	</div>
+	<script src="scripts/sunlight.js"></script>
+	<script src="scripts/sunlight.javascript.js"></script>
+	<script src="scripts/sunlight-plugin.doclinks.js"></script>
+	<script src="scripts/sunlight-plugin.linenumbers.js"></script>
+	<script src="scripts/sunlight-plugin.menu.js"></script>
+	<script src="scripts/jquery.min.js"></script>
+	<script src="scripts/jquery.scrollTo.js"></script>
+	<script src="scripts/jquery.localScroll.js"></script>
+	<script src="scripts/bootstrap-dropdown.js"></script>
+	<script src="scripts/toc.js"></script>
+
+
+	<script>  Sunlight.highlightAll({lineNumbers:,  showMenu: true, enableDoclinks :true}); </script>
+
+	<script>
+		$( function () {
+			$( "#toc" ).toc( {
+				selectors   : "h1,h2,h3,h4",
+				showAndHide : false,
+				scrollTo    : 60
+			} );
+			$( "#toc>ul" ).addClass( "nav nav-pills nav-stacked" );
+			$( "#main span[id^='toc']" ).addClass( "toc-shim" );
+
+		} );
+	</script>
+
+	
+
+</body>
+</html>
