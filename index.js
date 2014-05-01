@@ -31,6 +31,7 @@ var _ = require('underscore'),
    @constructor
  */
 function KeystoneRest() {
+  var self = this;
 
   /**
    * Array containing routes and handlers
@@ -80,7 +81,6 @@ function KeystoneRest() {
    * @param {Object} options    options for this method
    */
   var _addGet = function (keystoneList, options) {
-    var self = this;
     options = options || {};
 
 
@@ -126,7 +126,6 @@ function KeystoneRest() {
    * @param {Object} options    options for this method
    */
   var _addPost = function (keystoneList, options) {
-    var self = this;
     options = options || {};
 
 
@@ -153,7 +152,6 @@ function KeystoneRest() {
    * @param {Object} options    options for this method
    */
   var _addPut = function (keystoneList, options) {
-    var self = this;
     options = options || {};
 
 
@@ -189,7 +187,6 @@ function KeystoneRest() {
    * @param {List} keystoneList Keystone list
    */
   var _addDelete = function (keystoneList) {
-    var self = this;
 
 
     // Delete an item having a given id
