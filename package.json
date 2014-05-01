@@ -19,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/danielpquinn/keystone-rest/issues"
   },
-  "homepage": "https://github.com/danielpquinn/keystone-rest"
+  "homepage": "https://github.com/danielpquinn/keystone-rest",
+  "dependencies": {
+    "underscore": "~1.6.0"
+  }
 }

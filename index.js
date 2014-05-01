@@ -7,7 +7,7 @@ var _ = require('underscore'),
  * @constructor
  */
 function KeystoneRest() {
-  this.exposedRoutes = [];
+  this.routes = [];
 }
 
 
@@ -16,16 +16,13 @@ function KeystoneRest() {
  * @param  {List} keystoneList A keystone list
  * @param  {Object} options      Arrays containing methods and omitted fields
  */
-KeystoneRest.prototype.exposeRoutes = function(keystoneList, options) {
+KeystoneRest.prototype.exposeRoutes = function (keystoneList, options) {
   if (!options) { return console.log('No methods provided'); }
-  if (!options.methods) { return console.log('No methods provided'); }
 
-  if (!options.omit) { options.omit = {}; }
-
-  if (options.methods.indexOf('get') > -1) { this.addGet(keystoneList, options.omit['get']); }
-  if (options.methods.indexOf('post') > -1) { this.addPost(keystoneList, options.omit['post']); }
-  if (options.methods.indexOf('put') > -1) { this.addPut(keystoneList, options.omit['put']); }
-  if (options.methods.indexOf('delete') > -1) { this.addDelete(keystoneList, options.omit['delete']); }
+  if (options.get) { this.addGet(keystoneList, options.get); }
+  if (options.post) { this.addPost(keystoneList, options.post); }
+  if (options.put) { this.addPut(keystoneList, options.put); }
+  if (options.delete) { this.addDelete(keystoneList, options.delete); }
 };
 
 
@@ -49,6 +46,8 @@ KeystoneRest.prototype.sendError = function (err, res) {
 KeystoneRest.prototype.removeOmitted = function (model, omitted) {
   var object;
 
+  if (!omitted) { return model; }
+
   // If model is a mongoose model instance, change it
   // into a plain object so it's properties can be
   // deleted.
@@ -65,54 +64,73 @@ KeystoneRest.prototype.removeOmitted = function (model, omitted) {
 /**
  * Add get route
  * @param {List} keystoneList Keystone list
- * @param {Array} omitted     Array of fields to omit
+ * @param {Object} options    options for this method
  */
-KeystoneRest.prototype.addGet = function (keystoneList, omitted) {
+KeystoneRest.prototype.addGet = function (keystoneList, options) {
   var self = this;
+  options = options || {};
 
-  self.exposedRoutes.push({
+
+  // Get a list of items
+  self.routes.push({
     method: 'get',
+    allow: options.allow,
     route: '/api/' + keystoneList.key.toLowerCase(),
     handler: function (req, res) {
-      var populate = req.query.populate ? req.query.populate.split(',') : '';
+      var populate = req.query.populate ? req.query.populate.split(',') : '',
+        skip = req.query.skip || 0,
+        limit = req.query.limit || Infinity;
 
-      keystoneList.model.find().populate(populate).exec(function (err, response) {
+      keystoneList.model.find().skip(skip).limit(limit).populate(populate).exec(function (err, response) {
         if (err) { self.sendError(err, res); return; }
         response = _.map(response, function (item) {
-          return self.removeOmitted(item, omitted);
+          return self.removeOmitted(item, options.omit);
         });
-        res.json(self.removeOmitted(response, omitted));
+        res.json(self.removeOmitted(response, options.omit));
       });
     }
   });
-  self.exposedRoutes.push({
+
+
+  // Get one item by id
+  self.routes.push({
     method: 'get',
+    allow: options.allow,
     route: '/api/' + keystoneList.key.toLowerCase() + '/:id',
     handler: function (req, res) {
       var populate = req.query.populate ? req.query.populate.split(',') : '';
 
       keystoneList.model.findById(req.params.id).populate(populate).exec(function (err, response) {
-        if (!response) { return self.sendError({ message: 'Could not find ' + keystoneList.key.toLowerCase() }, res); }
         if (err) { self.sendError(err, res); return; }
-        res.json(self.removeOmitted(response, omitted));
+        res.json(self.removeOmitted(response, options.omit));
       });
     }
   });
 };
 
-KeystoneRest.prototype.addPost = function (keystoneList, omitted) {
-  var self = this;
 
-  self.exposedRoutes.push({
+/**
+ * Add post route
+ * @param {List} keystoneList Keystone list
+ * @param {Object} options    options for this method
+ */
+KeystoneRest.prototype.addPost = function (keystoneList, options) {
+  var self = this;
+  options = options || {};
+
+
+  // Create a new item
+  self.routes.push({
     method: 'post',
+    allow: options.allow,
     route: '/api/' + keystoneList.key.toLowerCase(),
     handler: function (req, res) {
       var item = new keystoneList.model(),
         updateHandler = item.getUpdateHandler(req, res);
 
-      updateHandler.process(req.body, function (err, response) {
+      updateHandler.process(self.removeOmitted(req.body, options.omit), function (err, response) {
         if (err) { self.sendError(err, res); return; }
-        res.json(self.removeOmitted(item, omitted));
+        res.json(self.removeOmitted(item, options.omit));
       });
     }
   });
@@ -122,13 +140,17 @@ KeystoneRest.prototype.addPost = function (keystoneList, omitted) {
 /**
  * Add put route
  * @param {List} keystoneList Keystone list
- * @param {Array} omitted     Array of fields to omit
+ * @param {Object} options    options for this method
  */
-KeystoneRest.prototype.addPut = function (keystoneList, omitted) {
+KeystoneRest.prototype.addPut = function (keystoneList, options) {
   var self = this;
+  options = options || {};
 
-  self.exposedRoutes.push({
+
+  // Update an item having a given id
+  self.routes.push({
     method: 'put',
+    allow: options.allow,
     route: '/api/' + keystoneList.key.toLowerCase() + '/:id',
     handler: function (req, res) {
       var populate = req.query.populate ? req.query.populate.split(',') : '';
@@ -137,14 +159,14 @@ KeystoneRest.prototype.addPut = function (keystoneList, omitted) {
         if (err) { self.sendError(err, res); return; }
         var updateHandler = item.getUpdateHandler(req);
 
-        updateHandler.process(req.body, function (err, response) {
+        updateHandler.process(self.removeOmitted(req.body, options.omit), function (err, response) {
           if (err) { self.sendError(err, res); return; }
 
           // Not sure if it's possible to populate mongoose models after
           // save, so get the document again and populate it.
           keystoneList.model.findById(req.params.id).populate(populate).exec(function (err, item) {
             if (err) { self.sendError(err, res); return; }
-            res.json(self.removeOmitted(item, omitted));
+            res.json(self.removeOmitted(item, options.omit));
           });
         });
       });
@@ -157,11 +179,15 @@ KeystoneRest.prototype.addPut = function (keystoneList, omitted) {
  * Add delete route
  * @param {List} keystoneList Keystone list
  */
-KeystoneRest.prototype.addDelete = function (keystoneList) {
+KeystoneRest.prototype.addDelete = function (keystoneList, options) {
   var self = this;
+  options = options || {};
 
-  self.exposedRoutes.push({
+
+  // Delete an item having a given id
+  self.routes.push({
     method: 'delete',
+    allow: options.allow,
     route: '/api/' + keystoneList.key.toLowerCase() + '/:id',
     handler: function (req, res) {
       keystoneList.model.findByIdAndRemove(req.params.id, function (err, response) {
