@@ -90,15 +90,35 @@ function KeystoneRest() {
       route: '/api/' + keystoneList.key.toLowerCase(),
       handler: function (req, res) {
         var populate = req.query.populate ? req.query.populate.split(',') : '',
-          skip = req.query.skip || 0,
-          limit = req.query.limit || Infinity;
+          query = keystoneList.model.find();
 
-        keystoneList.model.find().skip(skip).limit(limit).populate(populate).exec(function (err, response) {
+        query.count(function (err, count) {
           if (err) { return _sendError(err, res); }
-          response = _.map(response, function (item) {
-            return _removeOmitted(item, options.omit);
-          });
-          res.json(_removeOmitted(response, options.omit));
+
+          query.find()
+            .skip(req.query.skip)
+            .limit(req.query.limit)
+            .populate(populate).exec(function (err, response) {
+              if (err) { return _sendError(err, res); }
+              var pages = null;
+
+              if (req.query.skip) {
+                pages = Math.floor(response.length / count) + 1;
+              }
+
+              response = _.map(response, function (item) {
+                return _removeOmitted(item, options.omit);
+              });
+
+              if (pages) {
+                response = {
+                  pages: pages,
+                  result: response
+                };
+              }
+
+              res.json(response);
+            });
         });
       }
     });
@@ -126,17 +146,38 @@ function KeystoneRest() {
           method: 'get',
           route: '/api/' + keystoneList.key.toLowerCase() + '/:id/' + relationship,
           handler: function (req, res) {
-            var skip = req.query.skip || 0,
-              limit = req.query.limit || Infinity;
+            var count = 0;
 
-            keystoneList.model.findById(req.params.id)
-              .populate(relationship, null, null, {
-                limit: limit,
-                skip: skip
-              }).exec(function (err, response) {
-                if (err) { return _sendError(err, res); }
-                res.json(response[relationship]);
-              });
+            keystoneList.model.findById(req.params.id).exec(function (err, result) {
+              if (err) { return _sendError(err, res); }
+
+              count = result.length;
+
+              console.log(count);
+
+              keystoneList.model.findById(req.params.id)
+                .populate(relationship, null, null, {
+                  limit: req.query.limit,
+                  skip: req.query.skip
+                }).exec(function (err, response) {
+                  if (err) { return _sendError(err, res); }
+                  var pages = null;
+
+                  if (req.query.skip) {
+                    pages = Math.floor(count / count) + 1;
+                  }
+
+                  if (pages) {
+                    response = {
+                      pages: pages,
+                      result: response[relationship]
+                    };
+                  } else {
+                    response = response[relationship];
+                  }
+                  res.json(response);
+                });
+            });
           }
         });
       });
