@@ -100,23 +100,13 @@ function KeystoneRest() {
             .limit(req.query.limit)
             .populate(populate).exec(function (err, response) {
               if (err) { return _sendError(err, res); }
-              var pages = null;
-
-              if (req.query.skip) {
-                pages = Math.floor(response.length / count) + 1;
-              }
 
               response = _.map(response, function (item) {
                 return _removeOmitted(item, options.omit);
               });
 
-              if (pages) {
-                response = {
-                  pages: pages,
-                  result: response
-                };
-              }
-
+              // Make total total accessible via response headers
+              res.setHeader('total', count);
               res.json(response);
             });
         });
@@ -133,6 +123,13 @@ function KeystoneRest() {
 
         keystoneList.model.findById(req.params.id).populate(populate).exec(function (err, response) {
           if (err) { return _sendError(err, res); }
+          if (!response) {
+            res.status(404);
+            return res.json({
+              status: 'missing',
+              message: 'Could not find ' + keystoneList.key.toLowerCase() + ' with id ' + req.params.id
+            });
+          }
           res.json(_removeOmitted(response, options.omit));
         });
       }
@@ -146,14 +143,11 @@ function KeystoneRest() {
           method: 'get',
           route: '/api/' + keystoneList.key.toLowerCase() + '/:id/' + relationship,
           handler: function (req, res) {
-            var count = 0;
 
             keystoneList.model.findById(req.params.id).exec(function (err, result) {
               if (err) { return _sendError(err, res); }
 
-              count = result.length;
-
-              console.log(count);
+              var total = result[relationship].length;
 
               keystoneList.model.findById(req.params.id)
                 .populate(relationship, null, null, {
@@ -161,21 +155,10 @@ function KeystoneRest() {
                   skip: req.query.skip
                 }).exec(function (err, response) {
                   if (err) { return _sendError(err, res); }
-                  var pages = null;
 
-                  if (req.query.skip) {
-                    pages = Math.floor(count / count) + 1;
-                  }
-
-                  if (pages) {
-                    response = {
-                      pages: pages,
-                      result: response[relationship]
-                    };
-                  } else {
-                    response = response[relationship];
-                  }
-                  res.json(response);
+                  // Make total total accessible via response headers
+                  res.setHeader('total', total);
+                  res.json(response[relationship]);
                 });
             });
           }
