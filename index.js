@@ -39,6 +39,12 @@ function KeystoneRest() {
    */
   this.routes = [];
 
+  /**
+   * ID field
+   * @type {String}
+   */
+  this.key = '_id';
+
 
   /**
    * Send an error response
@@ -81,7 +87,7 @@ function KeystoneRest() {
    * @param {Object} options    options for this method
    */
   var _addGet = function (keystoneList, options) {
-    options = options || {};
+    var key = keystoneList.get('autokey') ? keystoneList.get('autokey').path : '_id';
 
 
     // Get a list of items
@@ -90,25 +96,15 @@ function KeystoneRest() {
       route: '/api/' + keystoneList.key.toLowerCase(),
       handler: function (req, res) {
         var populate = req.query.populate ? req.query.populate.split(',') : '',
-          query = keystoneList.model.find();
+          skip = req.query.skip || 0,
+          limit = req.query.limit || Infinity;
 
-        query.count(function (err, count) {
-          if (err) { return _sendError(err, res); }
-
-          query.find()
-            .skip(req.query.skip)
-            .limit(req.query.limit)
-            .populate(populate).exec(function (err, response) {
-              if (err) { return _sendError(err, res); }
-
-              response = _.map(response, function (item) {
-                return _removeOmitted(item, options.omit);
-              });
-
-              // Make total total accessible via response headers
-              res.setHeader('total', count);
-              res.json(response);
-            });
+        keystoneList.model.find().skip(skip).limit(limit).populate(populate).exec(function (err, response) {
+          if (err) { _sendError(err, res); return; }
+          response = _.map(response, function (item) {
+            return _removeOmitted(item, options.omit);
+          });
+          res.json(_removeOmitted(response, options.omit));
         });
       }
     });
@@ -117,54 +113,26 @@ function KeystoneRest() {
     // Get one item by id
     self.routes.push({
       method: 'get',
-      route: '/api/' + keystoneList.key.toLowerCase() + '/:id',
+      route: '/api/' + keystoneList.key.toLowerCase() + '/:key',
       handler: function (req, res) {
-        var populate = req.query.populate ? req.query.populate.split(',') : '';
+        var populate = req.query.populate ? req.query.populate.split(',') : '',
+          criteria = {};
 
-        keystoneList.model.findById(req.params.id).populate(populate).exec(function (err, response) {
-          if (err) { return _sendError(err, res); }
+        criteria[key] = req.params.key;
+
+        keystoneList.model.findOne(criteria).populate(populate).exec(function (err, response) {
+          if (err) { _sendError(err, res); return; }
           if (!response) {
             res.status(404);
             return res.json({
               status: 'missing',
-              message: 'Could not find ' + keystoneList.key.toLowerCase() + ' with id ' + req.params.id
+              message: 'Could not find ' + keystoneList.key.toLowerCase() + ' with ' + key + ' ' + req.params.key
             });
           }
           res.json(_removeOmitted(response, options.omit));
         });
       }
     });
-
-
-    // Get a list of relationships
-    if (options.relationships) {
-      _.each(options.relationships, function (relationship) {
-        self.routes.push({
-          method: 'get',
-          route: '/api/' + keystoneList.key.toLowerCase() + '/:id/' + relationship,
-          handler: function (req, res) {
-
-            keystoneList.model.findById(req.params.id).exec(function (err, result) {
-              if (err) { return _sendError(err, res); }
-
-              var total = result[relationship].length;
-
-              keystoneList.model.findById(req.params.id)
-                .populate(relationship, null, null, {
-                  limit: req.query.limit,
-                  skip: req.query.skip
-                }).exec(function (err, response) {
-                  if (err) { return _sendError(err, res); }
-
-                  // Make total total accessible via response headers
-                  res.setHeader('total', total);
-                  res.json(response[relationship]);
-                });
-            });
-          }
-        });
-      });
-    }
   };
 
 
@@ -174,8 +142,6 @@ function KeystoneRest() {
    * @param {Object} options    options for this method
    */
   var _addPost = function (keystoneList, options) {
-    options = options || {};
-
 
     // Create a new item
     self.routes.push({
@@ -185,8 +151,8 @@ function KeystoneRest() {
         var item = new keystoneList.model(),
           updateHandler = item.getUpdateHandler(req, res);
 
-        updateHandler.process(_removeOmitted(req.body, options.omit), function (err, response) {
-          if (err) { return _sendError(err, res); }
+        updateHandler.process(req.body, function (err, response) {
+          if (err) { _sendError(err, res); return; }
           res.json(_removeOmitted(item, options.omit));
         });
       }
@@ -200,27 +166,30 @@ function KeystoneRest() {
    * @param {Object} options    options for this method
    */
   var _addPut = function (keystoneList, options) {
-    options = options || {};
+    var key = keystoneList.get('autokey') ? keystoneList.get('autokey').path : '_id';
 
 
-    // Update an item having a given id
+    // Update an item having a given key
     self.routes.push({
       method: 'put',
-      route: '/api/' + keystoneList.key.toLowerCase() + '/:id',
+      route: '/api/' + keystoneList.key.toLowerCase() + '/:key',
       handler: function (req, res) {
-        var populate = req.query.populate ? req.query.populate.split(',') : '';
+        var populate = req.query.populate ? req.query.populate.split(',') : '',
+          criteria = {};
 
-        keystoneList.model.findById(req.params.id).exec(function (err, item) {
-          if (err) { return _sendError(err, res); }
+        criteria[key] = req.params.key;
+
+        keystoneList.model.findOne(criteria).exec(function (err, item) {
+          if (err) { _sendError(err, res); return; }
           var updateHandler = item.getUpdateHandler(req);
 
-          updateHandler.process(_removeOmitted(req.body, options.omit), function (err, response) {
-            if (err) { return _sendError(err, res); }
+          updateHandler.process(req.body, function (err, response) {
+            if (err) { _sendError(err, res); return; }
 
             // Not sure if it's possible to populate mongoose models after
             // save, so get the document again and populate it.
-            keystoneList.model.findById(req.params.id).populate(populate).exec(function (err, item) {
-              if (err) { return _sendError(err, res); }
+            keystoneList.model.findOne(criteria).populate(populate).exec(function (err, item) {
+              if (err) { _sendError(err, res); return; }
               res.json(_removeOmitted(item, options.omit));
             });
           });
@@ -240,10 +209,14 @@ function KeystoneRest() {
     // Delete an item having a given id
     self.routes.push({
       method: 'delete',
-      route: '/api/' + keystoneList.key.toLowerCase() + '/:id',
+      route: '/api/' + keystoneList.key.toLowerCase() + '/:key',
       handler: function (req, res) {
-        keystoneList.model.findByIdAndRemove(req.params.id, function (err, response) {
-          if (err) { return _sendError(err, res); }
+        var criteria = {};
+
+        criteria[key] = req.params.key;
+
+        keystoneList.model.findOne(criteria).remove().exec(function (err, response) {
+          if (err) { _sendError(err, res); return; }
           res.json({
             message: 'Successfully deleted ' + keystoneList.key.toLowerCase()
           });
