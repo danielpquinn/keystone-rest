@@ -146,32 +146,45 @@ function KeystoneRest() {
 
     // Get a list of relationships
     if (options.relationships) {
+      console.log(options.relationships);
       _.each(options.relationships, function (mixed, relationship) {
         var relationshipOptions;
-        if( _.isString(mixed)){
+
+        if (_.isString(mixed)) {
           relationship = mixed;
           relationshipOptions = {};
-        }else{
+        } else {
           relationshipOptions = mixed;
         }
+
         self.routes.push({
           method: 'get',
-          route: '/api/' + keystoneList.key.toLowerCase() + '/:id/' + relationship,
+          route: '/api/' + keystoneList.key.toLowerCase() + '/:key/' + relationship,
           handler: function (req, res) {
+            var criteria = {};
 
-            keystoneList.model.findById(req.params.id).exec(function (err, result) {
+            criteria[key] = req.params.key;
+
+            keystoneList.model.findOne(criteria).exec(function (err, result) {
               if (err) { return _sendError(err, res); }
               if (!result) {
                 res.status(404);
                 return res.json({
                   status: 'missing',
-                  message: 'Could not find ' + keystoneList.key.toLowerCase() + ' with id ' + req.params.id
+                  message: 'Could not find ' + keystoneList.key.toLowerCase() + ' with ' + key + ' ' + req.params.key
+                });
+              }
+              if (!result[relationship]) {
+                res.status(404);
+                return res.json({
+                  status: 'missing',
+                  message: keystoneList.key.toLowerCase() + ' has no ' + relationship
                 });
               }
 
               var total = result[relationship].length;
 
-              keystoneList.model.findById(req.params.id)
+              keystoneList.model.findOne(criteria)
                 .populate(relationship, null, null, {
                   limit: req.query.limit,
                   skip: req.query.skip,
