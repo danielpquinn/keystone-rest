@@ -35,6 +35,4 @@ Usage
     User.register();
 
     // Add routes to app
-    _.each(keystoneRest.routes, function (route) {
-      app[route.method](route.route, route.handler);
-    });
+    keystoneRest.registerRoutes(app);

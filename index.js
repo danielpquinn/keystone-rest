@@ -272,6 +272,16 @@ function KeystoneRest() {
     });
   };
 
+/**
+ * Registers routes
+ * @param  {Object}       app                  Keystone application instance
+ */
+  this.registerRoutes = function(app){
+      _.each( this.routes, function( route ){
+        app[route.method]( route.route, route.handler );
+      } );      
+  };
+
   /**
    * Expose routes
    * @param  {KeystoneList} keystoneList         A keystone list
@@ -283,14 +293,17 @@ function KeystoneRest() {
    * @param  {Object}       options.put          If present, put is exposed
    * @param  {Array}        options.put.omitted  Array of fields to omit from put response
    * @param  {Object}       options.delete       If present, delete is exposed
+   * @param  {Object}       app                  Keystone application instance, if present automatically registers routes
    */
-  this.exposeRoutes = function (keystoneList, options) {
+  this.exposeRoutes = function (keystoneList, options, app) {
     if (!options) { return console.log('No methods provided'); }
 
     if (options.get) { _addGet(keystoneList, options.get); }
     if (options.post) { _addPost(keystoneList, options.post); }
     if (options.put) { _addPut(keystoneList, options.put); }
     if (options.delete) { _addDelete(keystoneList); }
+      
+    if(app){ this.registerRoutes(app); }
   };
 }
 
