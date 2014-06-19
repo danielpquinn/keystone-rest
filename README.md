@@ -24,7 +24,7 @@ Usage
     });
 
 
-    // Expose Attribute model via REST api
+    // Expose User model via REST api
     keystoneRest.exposeRoutes(User, {
       post: {},
       get: { omit: ['password'] },

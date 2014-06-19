@@ -17,7 +17,7 @@ var _ = require('underscore'),
   });
 
 
-  // Expose Attribute model via REST api
+  // Expose User model via REST api
   keystoneRest.exposeRoutes(User, {
     post: {},
     get: { omit: ['password'] },
@@ -26,6 +26,9 @@ var _ = require('underscore'),
   });
 
   User.register();
+
+  // Add routes to app
+  keystoneRest.registerRoutes(app);
   </pre>
 
    @constructor
