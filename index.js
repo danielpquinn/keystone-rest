@@ -143,7 +143,14 @@ function KeystoneRest() {
 
     // Get a list of relationships
     if (options.relationships) {
-      _.each(options.relationships, function (relationship) {
+      _.each(options.relationships, function (mixed, relationship) {
+        var relationshipOptions;
+        if( _.isString(mixed)){
+          relationship = mixed;
+          relationshipOptions = {};
+        }else{
+          relationshipOptions = mixed;
+        }
         self.routes.push({
           method: 'get',
           route: '/api/' + keystoneList.key.toLowerCase() + '/:id/' + relationship,
@@ -171,7 +178,7 @@ function KeystoneRest() {
 
                   // Make total total accessible via response headers
                   res.setHeader('total', total);
-                  res.json(response[relationship]);
+                  res.json(_removeOmitted(response[relationship], relationshipOptions.omit));
                 });
             });
           }
