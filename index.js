@@ -34,6 +34,8 @@ var _ = require('underscore'),
    @constructor
  */
 function KeystoneRest() {
+  'use strict';
+
   var self = this;
 
   /**
@@ -282,12 +284,12 @@ function KeystoneRest() {
 
 /**
  * Registers routes
- * @param  {Object}       app                  Keystone application instance
+ * @param {Object} app Keystone application instance
  */
-  this.registerRoutes = function(app){
-      _.each( this.routes, function( route ){
-        app[route.method]( route.route, route.handler );
-      } );      
+  this.registerRoutes = function (app) {
+    _.each(this.routes, function (route) {
+      app[route.method](route.route, route.handler);
+    });
   };
 
   /**
@@ -310,11 +312,11 @@ function KeystoneRest() {
     if (options.post) { _addPost(keystoneList, options.post); }
     if (options.put) { _addPut(keystoneList, options.put); }
     if (options.delete) { _addDelete(keystoneList); }
-      
-    if(app){ this.registerRoutes(app); }
+
+    if (app) { this.registerRoutes(app); }
   };
 }
 
 
 // Export instance of keystoneRest
-exports = module.exports = new KeystoneRest();
+module.exports = new KeystoneRest();
