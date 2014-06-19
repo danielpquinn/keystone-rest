@@ -67,11 +67,9 @@ function KeystoneRest() {
     // deleted.
     object = model.toObject ? model.toObject() : model;
 
-    _.each(omitted, function (field) {
-      if (object[field]) { delete object[field]; }
-    });
+    var args = [object].concat(omitted);
+    return _.omit.apply(null, args);
 
-    return object;
   };
 
 
