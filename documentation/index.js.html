@@ -38,19 +38,17 @@
 
   var User = new keystone.List('User');
 
+  // Add 'restSelected: false' to hide from api
+  // Add 'restEditable: false' to disallow editing field via PUT
   User.add({
     name: { type: Types.Name, required: true, index: true },
-    password: { type: Types.Password, initial: true, required: false }
+    password: { type: Types.Password, initial: true, required: false, restSelected: false },
+    token: { type: String, restEditable: false }
   });
 
 
   // Expose User model via REST api
-  keystoneRest.exposeRoutes(User, {
-    post: {},
-    get: { omit: ['password'] },
-    put: { omit: ['password'] },
-    delete: {}
-  });
+  keystoneRest.addRoutes(User, 'get post put delete');
 
   User.register();
 
@@ -61,6 +59,8 @@
    @constructor
  */
 function KeystoneRest() {
+  'use strict';
+
   var self = this;
 
   /**
@@ -72,67 +72,155 @@ function KeystoneRest() {
 
   /**
    * Send an error response
-   * @param  {Object} err Error response object
-   * @param  {Object} res Express response
+   * @param {Object} err Error response object
+   * @param {Object} res Express response
    */
   var _sendError = function (err, res) {
+    /*jslint unparam: true */
     res.status(400);
     res.json(err);
   };
 
 
   /**
-   * Remove omitted fields from response
-   * @param  {Object} model   Plain model object or mongoose instance
-   * @param  {Array} omitted Array of fields to omit
-   * @return {Object}         Plain object representation of model with removed fields
+   * Remove any fields that are not in the schema
+   * @param {Object} model instance of mongoose model
+   * @param {Object} body express body object
    */
-  var _removeOmitted = function (model, omitted) {
-    var object;
+  var _cleanRequest = function (model, body) {
+    delete body._id;
 
-    if (!omitted) { return model; }
+    _.each(body, function (value, key) {
+      /*jslint unparam: true */
+      if (!model.schema.paths[key]) {
+        delete body[key];
+      }
+    });
+  };
+
+
+  /**
+   * Remove omitted fields from response
+   * @param {Object} model   Plain model object or mongoose instance
+   * @param {Array} omitted Array of fields to omit
+   * @return {Object} Plain object representation of model with removed fields
+   */
+  var _omit = function (model, omitted) {
+    var object;
 
     // If model is a mongoose model instance, change it
     // into a plain object so it's properties can be
     // deleted.
     object = model.toObject ? model.toObject() : model;
 
-    var args = [object].concat(omitted);
-    return _.omit.apply(null, args);
+    // Remove anything not in the schema
+    delete object.__v;
 
+    if (!omitted) { return object; }
+    return _.omit(object, omitted);
+  };
+
+
+  /**
+   * Convert fields that are relationships to _ids
+   * @param {Object} model instance of mongoose model
+   * @param {Object} body express body object
+   */
+  var _flattenRelationships = function (model, body) {
+    _.each(body, function (field, key) {
+      var schemaField = model.schema.paths[key];
+
+      // return if value is a string
+      if (typeof field === 'string' || !schemaField) { return; }
+
+      if (schemaField.options.ref) {
+        body[key] = field._id;
+      }
+
+      if (_.isArray(schemaField.options.type)) {
+        if (schemaField.options.type[0].ref) {
+          _.each(field, function (value, i) {
+            if (typeof value === 'string') { return; }
+            body[key][i] = value._id;
+          });
+        }
+      }
+    });
+  };
+
+
+  /**
+   * Get list of selected fields based on options in schema
+   * @param {Schema} schema Mongoose schema
+   */
+  var _getSelected = function (schema) {
+    var selected = [];
+
+    _.each(schema.paths, function (path) {
+      if (path.path === '__v') { return; }
+      if (path.options.restSelected !== false) {
+        selected.push(path.path);
+      }
+    });
+    
+    return selected.join(' ');
+  };
+
+
+  /**
+   * Get Uneditable
+   * @param {Schema} schema Mongoose schema
+   */
+  var _getUneditable = function (schema) {
+    var uneditable = [];
+
+    _.each(schema.paths, function (path) {
+      if (path.options.restEditable === false) { uneditable.push(path.path); }
+    });
+
+    return uneditable;
   };
 
 
   /**
    * Add get route
    * @param {List} keystoneList Keystone list
-   * @param {Object} options    options for this method
+   * @param {String} selected String passed to mongoose "select" method
+   * @param {Array} relationships Array of strings that will be used to identify fields to expose
    */
-  var _addGet = function (keystoneList, options) {
+  var _addGet = function (keystoneList, selected, relationships) {
     var key = keystoneList.get('autokey') ? keystoneList.get('autokey').path : '_id';
-
-    options = options || {};
 
     // Get a list of items
     self.routes.push({
       method: 'get',
-      route: '/api/' + keystoneList.key.toLowerCase(),
-      handler: function (req, res) {
-        var populate = req.query.populate ? req.query.populate.split(',') : '',
-          query = keystoneList.model.find();
+      route: '/api/' + keystoneList.model.collection.name,
+      handler: function (req, res, next) {
+        var populated = req.query.populate ? req.query.populate.split(',') : '';
 
-        query.count(function (err, count) {
+        keystoneList.model.find().count(function (err, count) {
           if (err) { return _sendError(err, res); }
 
-          query.find()
+          var query = keystoneList.model.find()
             .skip(req.query.skip)
             .limit(req.query.limit)
             .sort(req.query.sort)
-            .populate(populate).exec(function (err, response) {
+            .select(selected);
+
+          // Only respond with selected fields
+          _.each(populated, function (path) {
+            var modelName = keystoneList.model.schema.paths[path].options.type[0].ref;
+            query.populate({
+              path: path,
+              select: _getSelected(keystone.mongoose.model(modelName).schema)
+            });
+          });
+
+          query.exec(function (err, response) {
               if (err) { return _sendError(err, res); }
 
               response = _.map(response, function (item) {
-                return _removeOmitted(item, options.omit);
+                return item;
               });
 
               // Make total total accessible via response headers
@@ -147,15 +235,27 @@ function KeystoneRest() {
     // Get one item by id
     self.routes.push({
       method: 'get',
-      route: '/api/' + keystoneList.key.toLowerCase() + '/:key',
-      handler: function (req, res) {
-        var populate = req.query.populate ? req.query.populate.split(',') : '',
-          criteria = {};
+      route: '/api/' + keystoneList.model.collection.name + '/:key',
+      handler: function (req, res, next) {
+        var populated = req.query.populate ? req.query.populate.split(',') : '',
+          criteria = {},
+          query;
 
         criteria[key] = req.params.key;
 
-        keystoneList.model.findOne(criteria).populate(populate).exec(function (err, response) {
-          if (err) { _sendError(err, res); return; }
+        query = keystoneList.model.findOne(criteria).select(selected);
+
+        // Only respond with selected fields
+        _.each(populated, function (path) {
+          var modelName = keystoneList.model.schema.paths[path].options.type[0].ref;
+          query.populate({
+            path: path,
+            select: _getSelected(keystone.mongoose.model(modelName).schema)
+          });
+        });
+
+        query.exec(function (err, response) {
+          if (err) { return _sendError(err, res); }
           if (!response) {
             res.status(404);
             return res.json({
@@ -163,50 +263,55 @@ function KeystoneRest() {
               message: 'Could not find ' + keystoneList.key.toLowerCase() + ' with ' + key + ' ' + req.params.key
             });
           }
-          res.json(_removeOmitted(response, options.omit));
+          res.json(response);
         });
       }
     });
 
 
     // Get a list of relationships
-    if (options.relationships) {
-      _.each(options.relationships, function (mixed, relationship) {
-        var relationshipOptions;
-        if( _.isString(mixed)){
-          relationship = mixed;
-          relationshipOptions = {};
-        }else{
-          relationshipOptions = mixed;
-        }
+    if (relationships) {
+      _.each(relationships, function (relationship) {
         self.routes.push({
           method: 'get',
-          route: '/api/' + keystoneList.key.toLowerCase() + '/:id/' + relationship,
-          handler: function (req, res) {
+          route: '/api/' + keystoneList.model.collection.name + '/:key/' + relationship,
+          handler: function (req, res, next) {
+            var criteria = {};
 
-            keystoneList.model.findById(req.params.id).exec(function (err, result) {
+            criteria[key] = req.params.key;
+
+            keystoneList.model.findOne(criteria).exec(function (err, result) {
               if (err) { return _sendError(err, res); }
               if (!result) {
                 res.status(404);
                 return res.json({
                   status: 'missing',
-                  message: 'Could not find ' + keystoneList.key.toLowerCase() + ' with id ' + req.params.id
+                  message: 'Could not find ' + keystoneList.key.toLowerCase() + ' with ' + key + ' ' + req.params.key
+                });
+              }
+              if (!result[relationship]) {
+                res.status(404);
+                return res.json({
+                  status: 'missing',
+                  message: keystoneList.key.toLowerCase() + ' has no ' + relationship
                 });
               }
 
               var total = result[relationship].length;
 
-              keystoneList.model.findById(req.params.id)
-                .populate(relationship, null, null, {
+              keystoneList.model.findOne(criteria)
+                .populate({
+                  path: relationship,
                   limit: req.query.limit,
                   skip: req.query.skip,
-                  sort: req.query.sort
+                  sort: req.query.sort,
+                  select: selected
                 }).exec(function (err, response) {
                   if (err) { return _sendError(err, res); }
 
-                  // Make total total accessible via response headers
+                  // Make total accessible via response headers
                   res.setHeader('total', total);
-                  res.json(_removeOmitted(response[relationship], relationshipOptions.omit));
+                  res.json(response[relationship]);
                 });
             });
           }
@@ -219,22 +324,30 @@ function KeystoneRest() {
   /**
    * Add post route
    * @param {List} keystoneList Keystone list
-   * @param {Object} options    options for this method
+   * @param {String} selected   String passed to mongoose "select" method
+   * @param {Array}  uneditable Array of fields to remove from post
    */
-  var _addPost = function (keystoneList, options) {
-    options = options || {};
+  var _addPost = function (keystoneList, uneditable, selected) {
 
     // Create a new item
     self.routes.push({
       method: 'post',
-      route: '/api/' + keystoneList.key.toLowerCase(),
-      handler: function (req, res) {
+      route: '/api/' + keystoneList.model.collection.name,
+      handler: function (req, res, next) {
         var item = new keystoneList.model(),
           updateHandler = item.getUpdateHandler(req, res);
 
+        _cleanRequest(keystoneList.model, req.body);
+        _flattenRelationships(keystoneList.model, req.body);
+        req.body = _omit(req.body, uneditable);
+
         updateHandler.process(req.body, function (err) {
-          if (err) { _sendError(err, res); return; }
-          res.json(_removeOmitted(item, options.omit));
+          if (err) { return _sendError(err, res); }
+
+          keystoneList.model.findById(item._id).select(selected).exec(function (err) {
+            if (err) { return _sendError(err, res); }
+            res.json(item);
+          });
         });
       }
     });
@@ -244,35 +357,50 @@ function KeystoneRest() {
   /**
    * Add put route
    * @param {List} keystoneList Keystone list
-   * @param {Object} options    options for this method
+   * @param {String} selected   String passed to mongoose "select" method
+   * @param {Array} uneditable Array of fields to remove from post
    */
-  var _addPut = function (keystoneList, options) {
+  var _addPut = function (keystoneList, uneditable, selected) {
     var key = keystoneList.get('autokey') ? keystoneList.get('autokey').path : '_id';
-
-    options = options || {};
 
     // Update an item having a given key
     self.routes.push({
       method: 'put',
-      route: '/api/' + keystoneList.key.toLowerCase() + '/:key',
-      handler: function (req, res) {
-        var populate = req.query.populate ? req.query.populate.split(',') : '',
-          criteria = {};
+      route: '/api/' + keystoneList.model.collection.name + '/:key',
+      handler: function (req, res, next) {
+        var populated = req.query.populate ? req.query.populate.split(',') : '',
+          criteria = {},
+          query;
 
         criteria[key] = req.params.key;
 
+        _cleanRequest(keystoneList.model, req.body);
+        _flattenRelationships(keystoneList.model, req.body);
+        req.body = _omit(req.body, uneditable);
+
         keystoneList.model.findOne(criteria).exec(function (err, item) {
-          if (err) { _sendError(err, res); return; }
+          if (err) { return _sendError(err, res); }
           var updateHandler = item.getUpdateHandler(req);
 
           updateHandler.process(req.body, function (err) {
-            if (err) { _sendError(err, res); return; }
+            if (err) { return _sendError(err, res); }
 
             // Not sure if it's possible to populate mongoose models after
             // save, so get the document again and populate it.
-            keystoneList.model.findOne(criteria).populate(populate).exec(function (err, item) {
-              if (err) { _sendError(err, res); return; }
-              res.json(_removeOmitted(item, options.omit));
+            query = keystoneList.model.findOne(criteria).select(selected);
+
+            // Only respond with selected fields
+            _.each(populated, function (path) {
+              var modelName = keystoneList.model.schema.paths[path].options.type[0].ref;
+              query.populate({
+                path: path,
+                select: _getSelected(keystone.mongoose.model(modelName).schema)
+              });
+            });
+
+            query.exec(function (err, item) {
+              if (err) { return _sendError(err, res); }
+              res.json(item);
             });
           });
         });
@@ -286,65 +414,64 @@ function KeystoneRest() {
    * @param {List} keystoneList Keystone list
    */
   var _addDelete = function (keystoneList) {
-    var key = keystoneList.get('autokey') ? keystoneList.get('autokey').path : '_id';
 
     // Delete an item having a given id
     self.routes.push({
       method: 'delete',
-      route: '/api/' + keystoneList.key.toLowerCase() + '/:key',
-      handler: function (req, res) {
+      route: '/api/' + keystoneList.model.collection.name + '/:key',
+      handler: function (req, res, next) {
         var criteria = {};
 
         criteria[key] = req.params.key;
 
-        keystoneList.model.findOne(criteria).remove().exec(function (err) {
-          if (err) { _sendError(err, res); return; }
-          res.json({
-            message: 'Successfully deleted ' + keystoneList.key.toLowerCase()
+        // First find so middleware hooks (pre,post) will execute
+        keystoneList.model.findOne(criteria, function (err, result) {
+          if (err) { return _sendError(err, res); }
+
+          result.remove(function (err) {
+            if (err) { return _sendError(err, res); }
+            res.json({
+              message: 'Successfully deleted ' + keystoneList.key.toLowerCase()
+            });
           });
         });
       }
     });
   };
 
-/**
+ /**
  * Registers routes
- * @param  {Object}       app                  Keystone application instance
+ * @param {Object} app Keystone application instance
  */
-  this.registerRoutes = function(app){
-      _.each( this.routes, function( route ){
-        app[route.method]( route.route, route.handler );
-      } );      
+  this.registerRoutes = function (app) {
+    _.each(this.routes, function (route) {
+      app[route.method](route.route, route.handler);
+    });
   };
 
   /**
    * Expose routes
    * @param  {KeystoneList} keystoneList         A keystone list
-   * @param  {Object}       options              Arrays containing methods and omitted fields
-   * @param  {Object}       options.get          If present, get is exposed.
-   * @param  {Array}        options.get.omitted  Array of fields to omit from get response
-   * @param  {Object}       options.post         If present, post is exposed
-   * @param  {Array}        options.post.omitted Array of fields to omit from post response
-   * @param  {Object}       options.put          If present, put is exposed
-   * @param  {Array}        options.put.omitted  Array of fields to omit from put response
-   * @param  {Object}       options.delete       If present, delete is exposed
-   * @param  {Object}       app                  Keystone application instance, if present automatically registers routes
+   * @param {String} methods Methods to expose eg: 'get post put delete'
+   * @param {Array} relationships An array of relted field names to expose GET routes for
    */
-  this.exposeRoutes = function (keystoneList, options, app) {
-    if (!options) { return console.log('No methods provided'); }
+  this.addRoutes = function (keystoneList, methods, relationships) {
+    var selected = _getSelected(keystoneList.model.schema);
+    var uneditable = _getUneditable(keystoneList.model.schema);
 
-    if (options.get) { _addGet(keystoneList, options.get); }
-    if (options.post) { _addPost(keystoneList, options.post); }
-    if (options.put) { _addPut(keystoneList, options.put); }
-    if (options.delete) { _addDelete(keystoneList); }
-      
-    if(app){ this.registerRoutes(app); }
+    methods = methods.split(' ');
+    relationships = relationships ? relationships.split(' ') : [];
+
+    if (methods.indexOf('get') !== -1) { _addGet(keystoneList, selected, relationships); }
+    if (methods.indexOf('post') !== -1) { _addPost(keystoneList, uneditable, selected); }
+    if (methods.indexOf('put') !== -1) { _addPut(keystoneList, uneditable, selected); }
+    if (methods.indexOf('delete') !== -1) { _addDelete(keystoneList); }
   };
 }
 
 
 // Export instance of keystoneRest
-exports = module.exports = new KeystoneRest();</code></pre>
+module.exports = new KeystoneRest();</code></pre>
         </article>
     </section>
 
@@ -360,7 +487,7 @@ exports = module.exports = new KeystoneRest();</code></pre>
 <br clear="both">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha5</a> on Thu Jun 19 2014 07:39:30 GMT-0700 (PDT)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha5</a> on Mon Jun 23 2014 22:32:22 GMT-0700 (PDT)
 </footer>
 
 <script> prettyPrint(); </script>

@@ -55,19 +55,17 @@
 
   var User = new keystone.List('User');
 
+  // Add 'restSelected: false' to hide from api
+  // Add 'restEditable: false' to disallow editing field via PUT
   User.add({
     name: { type: Types.Name, required: true, index: true },
-    password: { type: Types.Password, initial: true, required: false }
+    password: { type: Types.Password, initial: true, required: false, restSelected: false },
+    token: { type: String, restEditable: false }
   });
 
 
   // Expose User model via REST api
-  keystoneRest.exposeRoutes(User, {
-    post: {},
-    get: { omit: ['password'] },
-    put: { omit: ['password'] },
-    delete: {}
-  });
+  keystoneRest.addRoutes(User, 'get post put delete');
 
   User.register();
 
@@ -106,7 +104,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line36">line 36</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line34">line 34</a>
     </li></ul></dd>
     
 
@@ -224,7 +222,7 @@
         <dl>
             
 <dt>
-    <h4 class="name" id="exposeRoutes"><span class="type-signature"></span>exposeRoutes<span class="signature">(keystoneList, options, app)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="addRoutes"><span class="type-signature"></span>addRoutes<span class="signature">(keystoneList, methods, relationships)</span><span class="type-signature"></span></h4>
 
     
 </dt>
@@ -289,13 +287,13 @@
 
         <tr>
             
-                <td class="name"><code>options</code></td>
+                <td class="name"><code>methods</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type">String</span>
 
 
             
@@ -305,75 +303,14 @@
 
             
 
-            <td class="description last">Arrays containing methods and omitted fields
-                <h6>Properties</h6>
-                
+            <td class="description last">Methods to expose eg: 'get post put delete'</td>
+        </tr>
 
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
     
 
         <tr>
             
-                <td class="name"><code>get</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">If present, get is exposed.
-                <h6>Properties</h6>
-                
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>omitted</code></td>
+                <td class="name"><code>relationships</code></td>
             
 
             <td class="type">
@@ -389,207 +326,7 @@
 
             
 
-            <td class="description last">Array of fields to omit from get response</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-            </td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>post</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">If present, post is exposed
-                <h6>Properties</h6>
-                
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>omitted</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Array</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Array of fields to omit from post response</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-            </td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>put</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">If present, put is exposed
-                <h6>Properties</h6>
-                
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>omitted</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Array</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Array of fields to omit from put response</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-            </td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>delete</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">If present, delete is exposed</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-            </td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>app</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Keystone application instance, if present automatically registers routes</td>
+            <td class="description last">An array of relted field names to expose GET routes for</td>
         </tr>
 
     
@@ -620,7 +357,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line306">line 306</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line431">line 431</a>
     </li></ul></dd>
     
 
@@ -739,7 +476,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line287">line 287</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line419">line 419</a>
     </li></ul></dd>
     
 
@@ -858,7 +595,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line261">line 261</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line389">line 389</a>
     </li></ul></dd>
     
 
@@ -888,7 +625,7 @@
         
             
 <dt>
-    <h4 class="name" id="_addGet"><span class="type-signature">&lt;inner> </span>_addGet<span class="signature">(keystoneList, options)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="_addGet"><span class="type-signature">&lt;inner> </span>_addGet<span class="signature">(keystoneList, selected, relationships)</span><span class="type-signature"></span></h4>
 
     
 </dt>
@@ -953,13 +690,13 @@
 
         <tr>
             
-                <td class="name"><code>options</code></td>
+                <td class="name"><code>selected</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type">String</span>
 
 
             
@@ -969,7 +706,30 @@
 
             
 
-            <td class="description last">options for this method</td>
+            <td class="description last">String passed to mongoose "select" method</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>relationships</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Array of strings that will be used to identify fields to expose</td>
         </tr>
 
     
@@ -1000,7 +760,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line84">line 84</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line164">line 164</a>
     </li></ul></dd>
     
 
@@ -1030,7 +790,7 @@
         
             
 <dt>
-    <h4 class="name" id="_addPost"><span class="type-signature">&lt;inner> </span>_addPost<span class="signature">(keystoneList, options)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="_addPost"><span class="type-signature">&lt;inner> </span>_addPost<span class="signature">(keystoneList, selected, uneditable)</span><span class="type-signature"></span></h4>
 
     
 </dt>
@@ -1095,13 +855,13 @@
 
         <tr>
             
-                <td class="name"><code>options</code></td>
+                <td class="name"><code>selected</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type">String</span>
 
 
             
@@ -1111,7 +871,30 @@
 
             
 
-            <td class="description last">options for this method</td>
+            <td class="description last">String passed to mongoose "select" method</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>uneditable</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Array of fields to remove from post</td>
         </tr>
 
     
@@ -1142,7 +925,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line197">line 197</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line303">line 303</a>
     </li></ul></dd>
     
 
@@ -1172,7 +955,7 @@
         
             
 <dt>
-    <h4 class="name" id="_addPut"><span class="type-signature">&lt;inner> </span>_addPut<span class="signature">(keystoneList, options)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="_addPut"><span class="type-signature">&lt;inner> </span>_addPut<span class="signature">(keystoneList, selected, uneditable)</span><span class="type-signature"></span></h4>
 
     
 </dt>
@@ -1237,13 +1020,13 @@
 
         <tr>
             
-                <td class="name"><code>options</code></td>
+                <td class="name"><code>selected</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type">String</span>
 
 
             
@@ -1253,7 +1036,30 @@
 
             
 
-            <td class="description last">options for this method</td>
+            <td class="description last">String passed to mongoose "select" method</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>uneditable</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Array of fields to remove from post</td>
         </tr>
 
     
@@ -1284,7 +1090,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line222">line 222</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line336">line 336</a>
     </li></ul></dd>
     
 
@@ -1314,7 +1120,529 @@
         
             
 <dt>
-    <h4 class="name" id="_removeOmitted"><span class="type-signature">&lt;inner> </span>_removeOmitted<span class="signature">(model, omitted)</span><span class="type-signature"> &rarr; {Object}</span></h4>
+    <h4 class="name" id="_cleanRequest"><span class="type-signature">&lt;inner> </span>_cleanRequest<span class="signature">(model, body)</span><span class="type-signature"></span></h4>
+
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        Remove any fields that are not in the schema
+    </div>
+    
+
+    
+
+    
+
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>model</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">instance of mongoose model</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>body</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">express body object</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+    
+
+    
+<dl class="details">
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line63">line 63</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<dt>
+    <h4 class="name" id="_flattenRelationships"><span class="type-signature">&lt;inner> </span>_flattenRelationships<span class="signature">(model, body)</span><span class="type-signature"></span></h4>
+
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        Convert fields that are relationships to _ids
+    </div>
+    
+
+    
+
+    
+
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>model</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">instance of mongoose model</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>body</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">express body object</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+    
+
+    
+<dl class="details">
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line102">line 102</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<dt>
+    <h4 class="name" id="_getSelected"><span class="type-signature">&lt;inner> </span>_getSelected<span class="signature">(schema)</span><span class="type-signature"></span></h4>
+
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        Get list of selected fields based on options in schema
+    </div>
+    
+
+    
+
+    
+
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>schema</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Schema</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Mongoose schema</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+    
+
+    
+<dl class="details">
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line129">line 129</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<dt>
+    <h4 class="name" id="_getUneditable"><span class="type-signature">&lt;inner> </span>_getUneditable<span class="signature">(schema)</span><span class="type-signature"></span></h4>
+
+    
+</dt>
+<dd>
+
+    
+    <div class="description">
+        Get Uneditable
+    </div>
+    
+
+    
+
+    
+
+    
+        <h5>Parameters:</h5>
+        
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>schema</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Schema</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Mongoose schema</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+    
+
+    
+<dl class="details">
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line147">line 147</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dd>
+
+        
+            
+<dt>
+    <h4 class="name" id="_omit"><span class="type-signature">&lt;inner> </span>_omit<span class="signature">(model, omitted)</span><span class="type-signature"> &rarr; {Object}</span></h4>
 
     
 </dt>
@@ -1426,7 +1754,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line63">line 63</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line81">line 81</a>
     </li></ul></dd>
     
 
@@ -1639,7 +1967,7 @@
 <br clear="both">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha5</a> on Thu Jun 19 2014 07:39:30 GMT-0700 (PDT)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha5</a> on Mon Jun 23 2014 22:32:22 GMT-0700 (PDT)
 </footer>
 
 <script> prettyPrint(); </script>
