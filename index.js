@@ -56,23 +56,6 @@ function KeystoneRest() {
 
 
   /**
-   * Remove any fields that are not in the schema
-   * @param {Object} model instance of mongoose model
-   * @param {Object} body express body object
-   */
-  var _cleanRequest = function (model, body) {
-    delete body._id;
-
-    _.each(body, function (value, key) {
-      /*jslint unparam: true */
-      if (!model.schema.paths[key]) {
-        delete body[key];
-      }
-    });
-  };
-
-
-  /**
    * Remove omitted fields from response
    * @param {Object} model   Plain model object or mongoose instance
    * @param {Array} omitted Array of fields to omit
@@ -97,7 +80,6 @@ function KeystoneRest() {
   /**
    * Convert fields that are relationships to _ids
    * @param {Object} model instance of mongoose model
-   * @param {Object} body express body object
    */
   var _flattenRelationships = function (model, body) {
     _.each(body, function (field, key) {
@@ -156,6 +138,22 @@ function KeystoneRest() {
 
 
   /**
+   * Get name of reference model
+   * @param {List} keystoneList Keystone list
+   * @param {String} path Ref path to get name from
+   */
+  var _getRefName = function (keystoneList, path) {
+    var options = keystoneList.model.schema.paths[path].options;
+    
+    if (options.ref) {
+      return options.ref;
+    }
+
+    return type[0].ref;
+  };
+
+
+  /**
    * Add get route
    * @param {List} keystoneList Keystone list
    * @param {String} selected String passed to mongoose "select" method
@@ -182,10 +180,9 @@ function KeystoneRest() {
 
           // Only respond with selected fields
           _.each(populated, function (path) {
-            var modelName = keystoneList.model.schema.paths[path].options.type[0].ref;
             query.populate({
               path: path,
-              select: _getSelected(keystone.mongoose.model(modelName).schema)
+              select: _getSelected(keystone.mongoose.model(_getRefName(keystoneList, path)).schema)
             });
           });
 
@@ -220,10 +217,9 @@ function KeystoneRest() {
 
         // Only respond with selected fields
         _.each(populated, function (path) {
-          var modelName = keystoneList.model.schema.paths[path].options.type[0].ref;
           query.populate({
             path: path,
-            select: _getSelected(keystone.mongoose.model(modelName).schema)
+            select: _getSelected(keystone.mongoose.model(_getRefName(keystoneList, path)).schema)
           });
         });
 
@@ -297,8 +293,8 @@ function KeystoneRest() {
   /**
    * Add post route
    * @param {List} keystoneList Keystone list
-   * @param {String} selected   String passed to mongoose "select" method
    * @param {Array}  uneditable Array of fields to remove from post
+   * @param {String} selected   String passed to mongoose "select" method
    */
   var _addPost = function (keystoneList, uneditable, selected) {
 
@@ -308,16 +304,20 @@ function KeystoneRest() {
       route: '/api/' + keystoneList.model.collection.name,
       handler: function (req, res, next) {
         var item = new keystoneList.model(),
-          updateHandler = item.getUpdateHandler(req, res);
+          updateHandler = item.getUpdateHandler(req),
+          query;
 
-        _cleanRequest(keystoneList.model, req.body);
         _flattenRelationships(keystoneList.model, req.body);
         req.body = _omit(req.body, uneditable);
 
         updateHandler.process(req.body, function (err) {
           if (err) { return _sendError(err, res); }
 
-          keystoneList.model.findById(item._id).select(selected).exec(function (err) {
+          query = keystoneList.model.findById(item._id);
+
+          query.select(selected);
+
+          query.exec(function (err) {
             if (err) { return _sendError(err, res); }
             res.json(item);
           });
@@ -330,8 +330,8 @@ function KeystoneRest() {
   /**
    * Add put route
    * @param {List} keystoneList Keystone list
-   * @param {String} selected   String passed to mongoose "select" method
    * @param {Array} uneditable Array of fields to remove from post
+   * @param {String} selected   String passed to mongoose "select" method
    */
   var _addPut = function (keystoneList, uneditable, selected) {
     var key = keystoneList.get('autokey') ? keystoneList.get('autokey').path : '_id';
@@ -347,7 +347,6 @@ function KeystoneRest() {
 
         criteria[key] = req.params.key;
 
-        _cleanRequest(keystoneList.model, req.body);
         _flattenRelationships(keystoneList.model, req.body);
         req.body = _omit(req.body, uneditable);
 
@@ -364,10 +363,9 @@ function KeystoneRest() {
 
             // Only respond with selected fields
             _.each(populated, function (path) {
-              var modelName = keystoneList.model.schema.paths[path].options.type[0].ref;
               query.populate({
                 path: path,
-                select: _getSelected(keystone.mongoose.model(modelName).schema)
+                select: _getSelected(keystone.mongoose.model(_getRefName(keystoneList, path)).schema)
               });
             });
 
@@ -387,6 +385,7 @@ function KeystoneRest() {
    * @param {List} keystoneList Keystone list
    */
   var _addDelete = function (keystoneList) {
+    var key = keystoneList.get('autokey') ? keystoneList.get('autokey').path : '_id';
 
     // Delete an item having a given id
     self.routes.push({
