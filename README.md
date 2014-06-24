@@ -34,8 +34,3 @@ Usage
 
     // Add routes to app
     keystoneRest.registerRoutes(app);
-
-
-Send some requests
-
-    curl -XGET "http://localhost:3000/api/users"
