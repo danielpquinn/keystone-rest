@@ -95,7 +95,7 @@ function KeystoneRest() {
       if (_.isArray(schemaField.options.type)) {
         if (schemaField.options.type[0].ref) {
           _.each(field, function (value, i) {
-            if (typeof value === 'string') { return; }
+            if (typeof value === 'string' || !value) { return; }
             body[key][i] = value._id;
           });
         }
@@ -145,11 +145,13 @@ function KeystoneRest() {
   var _getRefName = function (keystoneList, path) {
     var options = keystoneList.model.schema.paths[path].options;
     
+    // One to one relationship
     if (options.ref) {
       return options.ref;
     }
 
-    return type[0].ref;
+    // One to many relationsihp
+    return options.type[0].ref;
   };
 
 
