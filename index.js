@@ -430,6 +430,7 @@ function KeystoneRest() {
    * @param {Array} relationships An array of relted field names to expose GET routes for
    */
   this.addRoutes = function (keystoneList, methods, relationships) {
+    if (!keystoneList || !methods) { throw new Error('List and methods are required'); }
     var selected = _getSelected(keystoneList.model.schema);
     var uneditable = _getUneditable(keystoneList.model.schema);
 

@@ -27,6 +27,10 @@ Usage
     });
 
 
+    // Register User
+    User.register();
+
+
     // Expose User model via REST api
     keystoneRest.addRoutes(User, 'get post put delete');
 

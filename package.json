@@ -27,6 +27,11 @@
     "ink-docstrap": "~0.3.0-0",
     "jsdoc": "~3.3.0-alpha5",
     "gulp-jsdoc": "~0.1.4",
-    "gulp": "~3.6.2"
+    "gulp": "~3.6.2",
+    "chai": "~1.9.1",
+    "mocha": "~1.21.0",
+    "keystone": "~0.2.23",
+    "supertest": "~0.13.0",
+    "mongoose": "~3.8.13"
   }
 }
