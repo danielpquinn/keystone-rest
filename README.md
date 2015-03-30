@@ -24,6 +24,8 @@ Usage
       token: { type: String, restEditable: false }
     });
 
+    User.register();
+
     // Add user api endpoints
     keystoneRest.addRoutes(User, 'list show create update delete', {
       list: [listMiddleware],
@@ -32,8 +34,6 @@ Usage
       update: [updateMiddleware],
       delete: [deleteMiddleware]
     }, 'posts');
-
-    User.register();
 
     // Make sure keystone is initialized and started before
     // calling registerRoutes
