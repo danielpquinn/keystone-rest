@@ -468,12 +468,12 @@ function KeystoneRest() {
   /**
    * Add routes
    * @param {Object} keystoneList  Instance of KeystoneList
-   * @param {String} methods       Methods to expose eg: 'get post put delete'
-   * @param {Object} middleware    Map containing middleware to execute for each http method
+   * @param {String} methods       Methods to expose('list show create update delete')
+   * @param {Object} middleware    Map containing middleware to execute for each action ({ list: [middleware] })
    * @param {String} relationships Space separated list of relationships to build routes for
    */
 
-  self.addRoutes = function (keystoneList, methods, middleware, relationships) {
+  this.addRoutes = function (keystoneList, methods, middleware, relationships) {
     // Get reference to mongoose for internal use
     mongoose = keystone.mongoose;
 
@@ -524,7 +524,7 @@ function KeystoneRest() {
    * @param  {Object} app Express app
    */
 
-  self.registerRoutes = function (app) {
+  this.registerRoutes = function (app) {
     _.each(self.routes, function (route) {
       app[route.method](route.route, route.middleware, route.handler);
     });
