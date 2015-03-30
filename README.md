@@ -13,28 +13,32 @@ Usage
 -----
 
     var keystone = require('keystone'),
-    Types = keystone.Field.Types,
-    keystoneRest = require('keystone-rest');
+      Types = keystone.Field.Types,
+      keystoneRest = require('keystone-rest');
 
     var User = new keystone.List('User');
 
-    // Add 'restSelected: false' to hide from api
-    // Add 'restEditable: false' to disallow editing field via PUT
     User.add({
       name: { type: Types.Name, required: true, index: true },
       password: { type: Types.Password, initial: true, required: false, restSelected: false },
       token: { type: String, restEditable: false }
     });
 
+    // Add user api endpoints
+    keystoneRest.addRoutes(User, 'list show create update delete', {
+      list: [listMiddleware],
+      show: [showMiddleware],
+      create: [createMiddleware],
+      update: [updateMiddleware],
+      delete: [deleteMiddleware]
+    }, 'posts');
 
-    // Register User
     User.register();
 
-
-    // Expose User model via REST api
-    keystoneRest.addRoutes(User, 'get post put delete');
-
-    User.register();
+    // Make sure keystone is initialized and started before
+    // calling registerRoutes
+    keystone.init(config);
+    keystone.start();
 
     // Add routes to app
-    keystoneRest.registerRoutes(app);
+    keystoneRest.registerRoutes(keystone.app);

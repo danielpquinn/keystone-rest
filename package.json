@@ -21,7 +21,7 @@
   },
   "homepage": "http://danielpquinn.github.io/keystone-rest/index.html",
   "dependencies": {
-    "underscore": "~1.6.0"
+    "lodash": "~3.6.0"
   },
   "devDependencies": {
     "ink-docstrap": "~0.3.0-0",
@@ -30,7 +30,7 @@
     "gulp": "~3.6.2",
     "chai": "~1.9.1",
     "mocha": "~1.21.0",
-    "keystone": "~0.2.23",
+    "keystone": "latest",
     "supertest": "~0.13.0",
     "mongoose": "~3.8.13"
   }
