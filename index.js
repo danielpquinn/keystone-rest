@@ -92,7 +92,7 @@ function KeystoneRest() {
       var schemaField = model.schema.paths[key];
 
       // return if value is a string
-      if (typeof field === 'string' || !schemaField) { return; }
+      if (typeof field === 'string' || !schemaField || _.isEmpty(schemaField)) { return; }
 
       if (schemaField.options.ref) {
         body[key] = field._id;
