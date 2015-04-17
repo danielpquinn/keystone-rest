@@ -1,3 +1,5 @@
+'use strict';
+
 var _ = require('lodash'),
   keystone = require('keystone');
 
@@ -382,48 +384,57 @@ function KeystoneRest() {
     var paramName = Model.modelName.toLowerCase();
     var versionKey = Model.schema.options.versionKey;
 
+    var handler = function (req, res, next) {
+      var populated = req.query.populate ? req.query.populate.split(',') : '';
+      var criteria = {};
+      var querySelect;
+
+      if (req.query.select) {
+        querySelect = req.query.select.split(',');
+        querySelect = querySelect.filter(function (field) {
+          return (selected.indexOf(field) > -1);
+        }).join(' ');
+      }
+
+      criteria[findBy] = req.params[paramName];
+
+      _flattenRelationships(Model, req.body);
+      req.body = _.omit(req.body, uneditable);
+
+      Model.findOne(criteria).exec(function (err, item) {
+
+        /*jslint unparam: true */
+        if (err && err.type !== 'ObjectId') { return _sendError(err, req, res, next); }
+        if (!item) { return _send404(res, 'Could not find ' + Model.collection.name.toLowerCase() + ' with id ' + req.params.id); }
+
+        if (req.body[versionKey] < item[versionKey]) { return _sendError(new mongoose.Error.VersionError(), req, res, next); }
+
+        _.extend(item, req.body);
+
+        item.save(function (err, item) {
+          if (err) { return _sendError(err, req, res, next); }
+
+          Model.findOne(criteria).select(querySelect || selected).populate(populated).exec(function (err, item) {
+            if (err) { return _sendError(err, req, res, next); }
+            res.json(item);
+          });
+        });
+      });
+    };
+
     // Update an item having a given key
     self.routes.push({
       method: 'put',
       middleware: middleware,
       route: '/api/' + collectionName + '/:' + paramName,
-      handler: function (req, res, next) {
-        var populated = req.query.populate ? req.query.populate.split(',') : '';
-        var criteria = {};
-        var querySelect;
+      handler: handler
+    });
 
-        if (req.query.select) {
-          querySelect = req.query.select.split(',');
-          querySelect = querySelect.filter(function (field) {
-            return (selected.indexOf(field) > -1);
-          }).join(' ');
-        }
-
-        criteria[findBy] = req.params[paramName];
-
-        _flattenRelationships(Model, req.body);
-        req.body = _.omit(req.body, uneditable);
-
-        Model.findOne(criteria).exec(function (err, item) {
-
-          /*jslint unparam: true */
-          if (err && err.type !== 'ObjectId') { return _sendError(err, req, res, next); }
-          if (!item) { return _send404(res, 'Could not find ' + Model.collection.name.toLowerCase() + ' with id ' + req.params.id); }
-
-          if (req.body[versionKey] < item[versionKey]) { return _sendError(new mongoose.Error.VersionError(), req, res, next); }
-
-          _.extend(item, req.body);
-
-          item.save(function (err, item) {
-            if (err) { return _sendError(err, req, res, next); }
-
-            Model.findOne(criteria).select(querySelect || selected).populate(populated).exec(function (err, item) {
-              if (err) { return _sendError(err, req, res, next); }
-              res.json(item);
-            });
-          });
-        });
-      }
+    self.routes.push({
+      method: 'patch',
+      middleware: middleware,
+      route: '/api/' + collectionName + '/:' + paramName,
+      handler: handler
     });
   };
 

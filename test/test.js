@@ -360,6 +360,24 @@ describe('PUT /api/users/:_id', function () {
   });
 });
 
+// Test update
+describe('PATCH /api/users/:_id', function () {
+
+  // Set up database
+  beforeEach(setupDb);
+  afterEach(cleanupDb);
+
+  it('Updates an existing user', function (done) {
+    request(keystone.app)
+      .patch('/api/users/' + this.user._id)
+      .send({ name: 'Test User Updated'})
+      .expect(function (res) {
+        if (res.body.name !== 'Test User Updated') { return 'User was not updated'; }
+      })
+      .end(done);
+  });
+});
+
 // Test delete
 describe('DELETE /api/users/:_id', function () {
 
