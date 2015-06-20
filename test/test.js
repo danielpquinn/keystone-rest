@@ -96,6 +96,7 @@ keystoneRest.registerRoutes(keystone.app);
 
 // Test list
 describe('GET /api/users', function () {
+  this.timeout(5000);
 
   // Set up database
   beforeEach(setupDb);
@@ -167,6 +168,7 @@ describe('GET /api/users', function () {
 
 // Test show
 describe('GET /api/users/:_id', function () {
+  this.timeout(5000);
 
   // Set up database
   beforeEach(setupDb);
@@ -226,6 +228,7 @@ describe('GET /api/users/:_id', function () {
 
 // Test relationship
 describe('GET api/users/:_id/posts', function () {
+  this.timeout(5000);
 
   // Set up database
   beforeEach(setupDb);
@@ -252,6 +255,7 @@ describe('GET api/users/:_id/posts', function () {
 
 // Test show
 describe('GET api/posts/:slug', function () {
+  this.timeout(5000);
 
   // Set up database
   beforeEach(setupDb);
@@ -270,6 +274,7 @@ describe('GET api/posts/:slug', function () {
 
 // Test create
 describe('POST /api/users', function () {
+  this.timeout(5000);
 
   // Clean up after testing post
   afterEach(cleanupDb);
@@ -307,6 +312,7 @@ describe('POST /api/users', function () {
 
 // Test update
 describe('PUT /api/users/:_id', function () {
+  this.timeout(5000);
 
   // Set up database
   beforeEach(setupDb);
@@ -362,6 +368,7 @@ describe('PUT /api/users/:_id', function () {
 
 // Test update
 describe('PATCH /api/users/:_id', function () {
+  this.timeout(5000);
 
   // Set up database
   beforeEach(setupDb);
@@ -380,6 +387,7 @@ describe('PATCH /api/users/:_id', function () {
 
 // Test delete
 describe('DELETE /api/users/:_id', function () {
+  this.timeout(5000);
 
   // Set up database
   beforeEach(setupDb);
