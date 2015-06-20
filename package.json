@@ -4,7 +4,8 @@
   "description": "Exposes keystone lists via restful api",
   "main": "index.js",
   "scripts": {
-    "test": "mocha test/test.js"
+    "test": "./node_modules/istanbul/lib/cli.js cover ./node_modules/.bin/_mocha",
+    "coveralls": "cat ./coverage/lcov.info | ./node_modules/.bin/coveralls"
   },
   "repository": {
     "type": "git",
@@ -24,14 +25,16 @@
     "lodash": "~3.6.0"
   },
   "devDependencies": {
-    "ink-docstrap": "~0.3.0-0",
-    "jsdoc": "~3.3.0-alpha5",
-    "gulp-jsdoc": "~0.1.4",
-    "gulp": "~3.6.2",
     "chai": "~1.9.1",
-    "mocha": "~1.21.0",
+    "coveralls": "^2.11.2",
+    "gulp": "~3.6.2",
+    "gulp-jsdoc": "~0.1.4",
+    "ink-docstrap": "~0.3.0-0",
+    "istanbul": "^0.3.15",
+    "jsdoc": "~3.3.0-alpha5",
     "keystone": "latest",
-    "supertest": "~0.13.0",
-    "mongoose": "~3.8.13"
+    "mocha": "^2.2.5",
+    "mongoose": "~3.8.13",
+    "supertest": "~0.13.0"
   }
 }

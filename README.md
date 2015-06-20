@@ -3,6 +3,7 @@ keystone-rest
 
 Expose keystone lists via REST api.
 
+[![Coverage Status](https://coveralls.io/repos/danielpquinn/keystone-rest/badge.svg?branch=master)](https://coveralls.io/r/danielpquinn/keystone-rest?branch=master)
 
 Documentation
 -------------
