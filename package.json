@@ -22,19 +22,19 @@
   },
   "homepage": "http://danielpquinn.github.io/keystone-rest/index.html",
   "dependencies": {
-    "lodash": "~3.6.0"
+    "lodash": "^3.9.3"
   },
   "devDependencies": {
-    "chai": "~1.9.1",
-    "coveralls": "^2.11.2",
-    "gulp": "~3.6.2",
-    "gulp-jsdoc": "~0.1.4",
-    "ink-docstrap": "~0.3.0-0",
-    "istanbul": "^0.3.15",
-    "jsdoc": "~3.3.0-alpha5",
-    "keystone": "latest",
-    "mocha": "^2.2.5",
-    "mongoose": "~3.8.13",
-    "supertest": "~0.13.0"
+    "chai": "^3.0.0",
+    "coveralls": "*",
+    "gulp": "^3.9.0",
+    "gulp-jsdoc": "*",
+    "ink-docstrap": "^0.5.2",
+    "istanbul": "*",
+    "jsdoc": "^3.3.2",
+    "keystone": "^0.3.11",
+    "mocha": "*",
+    "mongoose": "^4.0.5",
+    "supertest": "^1.0.1"
   }
 }
